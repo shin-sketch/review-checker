@@ -6,13 +6,13 @@ from guidelines import SEVERITY_LABELS
 from scraper import scrape_review
 
 st.set_page_config(
-    page_title="くらしのマーケット 口コミ違反チェッカー",
+    page_title="くらしのマーケット 出店者違反チェッカー",
     page_icon="🔍",
     layout="wide",
 )
 
-st.title("🔍 くらしのマーケット 口コミ ガイドライン違反チェッカー")
-st.caption("口コミURLを入力すると、公式ガイドラインに基づいて違反内容を自動チェックします。")
+st.title("🔍 くらしのマーケット 出店者ガイドライン違反チェッカー")
+st.caption("口コミURLを入力すると、口コミ内容から出店者のガイドライン違反行為を自動検出します。")
 
 st.markdown("---")
 
@@ -93,14 +93,15 @@ if run_button:
             max_severity = ""
 
         is_violation = check_result.get("is_violation", False)
+        can_apply_deletion = check_result.get("can_apply_deletion", False)
         error_msg = check_result.get("error", "")
 
         if error_msg:
             status_str = "⚠️ チェックエラー"
         elif is_violation:
-            status_str = "🚨 違反あり"
+            status_str = "🚨 出店者違反の疑い"
         else:
-            status_str = "✅ 問題なし"
+            status_str = "✅ 違反なし"
 
         results.append({
             "url": url,
@@ -110,6 +111,7 @@ if run_button:
             "reviewer_name": scraped.get("reviewer_name", ""),
             "posted_date": scraped.get("posted_date", ""),
             "is_violation": is_violation,
+            "can_apply_deletion": can_apply_deletion,
             "violation_count": len(violations),
             "violation_categories": violation_categories,
             "max_severity": SEVERITY_LABELS.get(max_severity, "") if max_severity else "",
@@ -123,8 +125,8 @@ if run_button:
     violation_count = sum(1 for r in results if r["is_violation"])
     col_a, col_b, col_c = st.columns(3)
     col_a.metric("チェック件数", len(results))
-    col_b.metric("違反あり", violation_count, delta=None)
-    col_c.metric("問題なし", len(results) - violation_count - sum(1 for r in results if r["is_violation"] is None))
+    col_b.metric("出店者違反の疑い", violation_count)
+    col_c.metric("違反なし", len(results) - violation_count)
 
     st.markdown("#### 結果一覧")
     for r in results:

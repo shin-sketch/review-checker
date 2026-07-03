@@ -33,45 +33,59 @@ def get_client() -> anthropic.Anthropic:
 
 
 GUIDELINE_TEXT = "\n".join(
-    f"{i+1}. 【{g['name']}】: {g['description']}"
+    f"{i+1}. 【{g['name']}】: {g['description']}\n   検出ヒント: {', '.join(g['detection_hints'][:3])}"
     for i, g in enumerate(GUIDELINES)
 )
 
 CHECK_PROMPT_TEMPLATE = """
-あなたは「くらしのマーケット」の口コミ審査担当です。
-以下の口コミが、投稿ガイドラインに違反しているかどうかを判定してください。
+あなたはくらしのマーケットの運営担当者です。
+お客様が投稿した口コミを読んで、その口コミの内容から「出店者がくらしのマーケットのガイドラインに違反する行為をしていないか」を判定してください。
 
 ## 口コミ情報
-- 投稿者名: {reviewer_name}
 - サービス種別: {service_type}
 - 投稿日: {posted_date}
-- 評価: {rating}
+- 評価（星）: {rating}
 - 口コミ本文:
 「{review_text}」
 
-## チェック対象ガイドライン
+## 出店者ガイドライン（参照元: faq.curama.jp/docs/shop/guidelines/）
 {guidelines}
 
 ## 判定指示
-上記のガイドラインに照らして、この口コミを審査してください。
+
+口コミの内容から、出店者が以下のような違反行為をした形跡がないかを判定してください。
+
+### 特に重要な違反（必ず検出する）
+- **名刺・連絡先の開示**: 「名刺をもらった」「電話番号を教えてもらった」「LINEを交換した」→ 直接取引誘導の違反
+- **直接取引の誘導**: 「次回は直接連絡してと言われた」「くらしのマーケット以外で予約してと言われた」→ 直接取引の違反
+- **料金の不正**: 「見積もりと違う金額」「当日に追加料金」「出張費を請求された」→ 料金ルール違反
+- **無応答・無断キャンセル**: 「連絡が来なかった」「当日来なかった」→ 対応義務違反
+- **口コミの誘導**: 「星5をつけてほしいと言われた」「良い口コミを書くよう頼まれた」→ 口コミ操作違反
+- **資格外・無断外注**: 「別の業者が来た」「資格がなさそうだった」→ 外注ルール違反
+
+### 判定の注意点
+- 口コミに明示的に書かれていなくても、文脈から強く示唆される場合は違反として報告する
+- 例：「また直接頼みたいです」という口コミ → 業者が直接取引を誘導した可能性が高い
+- 例：「名刺を渡されました」→ 連絡先開示の明確な違反
+- 複数の違反がある場合はすべて報告する
 
 以下のJSON形式のみで回答してください（説明文は不要）:
 {{
   "is_violation": true または false,
   "violations": [
     {{
-      "category_id": "ガイドラインのid（personal_info/defamation/unverifiable_claims/privacy_violation/irrelevant_content/fake_review/lack_of_specificity/store_related のいずれか）",
+      "category_id": "direct_transaction/price_violation/response_violation/service_misrepresentation/inappropriate_conduct/review_manipulation/unauthorized_subcontracting のいずれか",
       "category_name": "違反カテゴリ名",
       "severity": "high/medium/low",
-      "reason": "なぜ違反と判定したか（具体的に、50文字以内）",
-      "quote": "違反該当箇所の引用（30文字以内、なければ空文字）"
+      "reason": "口コミのどの記述から違反と判定したか（具体的に、70文字以内）",
+      "quote": "口コミ内の根拠となる箇所を引用（40文字以内、なければ空文字）"
     }}
   ],
-  "summary": "総合判定の要約（100文字以内）",
+  "summary": "運営担当者への総合コメント（違反の概要と推奨アクションを含めて150文字以内）",
   "confidence": "high/medium/low（判定の確信度）"
 }}
 
-違反がない場合は violations を空配列にしてください。
+違反が検出されない場合は violations を空配列にしてください。
 """.strip()
 
 
@@ -102,7 +116,7 @@ def check_review(review_data: dict) -> dict:
     try:
         client = get_client()
         message = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model="claude-sonnet-4-6",
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
