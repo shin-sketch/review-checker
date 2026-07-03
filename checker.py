@@ -68,6 +68,13 @@ CHECK_PROMPT_TEMPLATE = """
 - **連絡先の開示**: 「電話番号を教えてもらった」「LINEを交換した」→ 直接取引誘導の違反
 - **直接取引の誘導**: 「次回は直接連絡してと言われた」「くらしのマーケット以外で予約してと言われた」→ 直接取引の違反
 - **料金の不正**: 「見積もりと違う金額」「当日に追加料金」「出張費を請求された」→ 料金ルール違反
+- **高速代・有料道路代の別途請求**: 「高速代を別途請求された」「有料道路代を取られた」→ 対応エリア内での別途請求は禁止
+- **当日・即日の追加料金**: 「当日だからと追加料金を言われた」→ 当日予約を理由にした加算は禁止
+- **女性スタッフ・スタッフ指定の追加料金**: 「女性スタッフを頼んだら追加料金」「指名料を取られた」→ 禁止
+- **待機料金の請求**: 「待っていただけなのに料金を請求された」→ 禁止
+- **カード拒否・現金優遇**: 「現金なら安くすると言われた」「カードは使えないと言われた」→ 禁止
+- **物販・商品販売**: 「サプリを売られた」「器具を購入するよう勧められた」→ 出張サービス中の物販は禁止
+- **独自会員サービスの勧誘**: 「会員になりませんかと言われた」「独自のアフターフォロープランを勧められた」→ くらしのマーケット外サービスへの勧誘は禁止
 - **無応答・無断キャンセル**: 「連絡が来なかった」「当日来なかった」→ 対応義務違反
 - **口コミの誘導**: 「星5をつけてほしいと言われた」「良い口コミを書くよう頼まれた」→ 口コミ操作違反
 - **資格外・無断外注**: 「別の業者が来た」「資格がなさそうだった」→ 外注ルール違反
@@ -83,7 +90,7 @@ CHECK_PROMPT_TEMPLATE = """
   "is_violation": true または false,
   "violations": [
     {{
-      "category_id": "direct_transaction/price_violation/response_violation/service_misrepresentation/inappropriate_conduct/review_manipulation/unauthorized_subcontracting のいずれか",
+      "category_id": "direct_transaction/price_violation/response_violation/service_misrepresentation/inappropriate_conduct/review_manipulation/unauthorized_subcontracting/prohibited_sales_solicitation のいずれか",
       "category_name": "違反カテゴリ名",
       "severity": "high/medium/low",
       "reason": "口コミのどの記述から違反と判定したか（具体的に、70文字以内）",
