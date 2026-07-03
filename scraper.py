@@ -166,20 +166,34 @@ def _extract_review_text(soup: BeautifulSoup) -> str:
                 if len(text) > 30:
                     return text
 
-    # 3. ページ内の全テキストブロックから最長のものを口コミ候補として抽出
-    # curama.jpのように動的レンダリングでも静的HTMLに埋め込まれているケースに対応
+    # 3. ページ内のテキストブロックを「口コミらしさ」でスコアリングして抽出
+    # 地名リスト・エリア説明など非口コミテキストを除外するためスコア方式を採用
+    import re as _re
+
+    GEO_SUFFIXES = _re.compile(r'[都道府県市区町村郡]')
+    SENTENCE_ENDS = _re.compile(r'[。！？!?]')
+
+    def _review_score(text: str) -> float:
+        if len(text) == 0:
+            return -1
+        geo_density = len(GEO_SUFFIXES.findall(text)) / len(text)
+        # 地名密度が高い（エリアリスト）はスコアを大幅に下げる
+        if geo_density > 0.05:
+            return -1
+        sentence_density = len(SENTENCE_ENDS.findall(text)) / len(text)
+        # 長さボーナス（上限500文字で飽和）
+        length_bonus = min(len(text), 500) / 500
+        return sentence_density * 10 + length_bonus
+
     candidates = []
     for tag in ["p", "div", "section", "article"]:
         for el in soup.find_all(tag):
-            # 子要素を多く持つコンテナは除外
             if len(el.find_all(recursive=False)) > 5:
                 continue
             text = el.get_text(strip=True)
-            # 50文字以上・500文字以下の「口コミらしい」テキストブロックを候補に
-            if 50 < len(text) < 2000:
+            if 50 < len(text) < 3000:
                 candidates.append(text)
 
-    # 重複除去して最長を返す
     seen = set()
     unique = []
     for c in candidates:
@@ -188,7 +202,9 @@ def _extract_review_text(soup: BeautifulSoup) -> str:
             unique.append(c)
 
     if unique:
-        return max(unique, key=len)
+        best = max(unique, key=_review_score)
+        if _review_score(best) > 0:
+            return best
 
     # 4. metaタグから取得
     for attr in [{"property": "og:description"}, {"name": "description"}]:
