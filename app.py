@@ -23,7 +23,6 @@ with st.expander("📋 チェック対象ガイドライン（クリックで展
         st.markdown(f"**{g['name']}** {severity_label}")
         st.caption(g["description"])
 
-st.markdown("### URLを入力してください")
 st.caption("1行に1つのURLを入力してください。複数のURLを同時にチェックできます。")
 
 url_input = st.text_area(
@@ -47,14 +46,12 @@ if run_button:
     st.markdown("---")
     st.markdown(f"### 📊 チェック結果（{len(urls)} 件）")
 
+    results = []
     progress_bar = st.progress(0, text="チェック準備中...")
     status_text = st.empty()
 
-    results = []
-
     for i, url in enumerate(urls):
-        progress = (i) / len(urls)
-        progress_bar.progress(progress, text=f"処理中 {i + 1}/{len(urls)}: {url[:60]}...")
+        progress_bar.progress(i / len(urls), text=f"処理中 {i + 1}/{len(urls)}: {url[:60]}...")
         status_text.info(f"⏳ スクレイピング中: {url[:80]}")
 
         scraped = scrape_review(url)
@@ -79,19 +76,12 @@ if run_button:
         check_result = check_review(scraped)
 
         violations = check_result.get("violations", [])
-        violation_categories = "、".join(
-            v.get("category_name", "") for v in violations
-        )
-
+        violation_categories = "、".join(v.get("category_name", "") for v in violations)
         severity_order = {"high": 0, "medium": 1, "low": 2}
-        if violations:
-            max_severity = min(
-                violations,
-                key=lambda v: severity_order.get(v.get("severity", "low"), 9),
-            ).get("severity", "low")
-        else:
-            max_severity = ""
-
+        max_severity = (
+            min(violations, key=lambda v: severity_order.get(v.get("severity", "low"), 9)).get("severity", "low")
+            if violations else ""
+        )
         is_violation = check_result.get("is_violation", False)
         can_apply_deletion = check_result.get("can_apply_deletion", False)
         error_msg = check_result.get("error", "")
